@@ -10,7 +10,9 @@ class SupremeCourtHeatmap {
         this.filteredData = [];
         this.currentPage = 1;
         this.itemsPerPage = 30;
-        this.currentSearchTerm = '';
+        this.currentDivisionFilter = '';
+        this.currentCaseSearchTerm = '';
+        this.divisions = [];
         this.justiceColumns = [
             'Gesmundo', 'Leonen', 'Caguioa', 'Hernando', 'Lazaro-Javier', 
             'M. Lopez', 'Inting', 'Zalameda', 'Gaerlan', 'Rosario', 
@@ -253,26 +255,50 @@ class SupremeCourtHeatmap {
                     text-align: left;
                 }
                 
-                .heatmap-search-container {
+                .heatmap-filters-container {
                     margin-bottom: 15px;
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 15px;
                     flex-wrap: wrap;
                 }
                 
-                .heatmap-search-input {
+                .heatmap-filter-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .heatmap-filter-label {
+                    font-weight: 500;
+                    color: #212529;
+                    font-size: 14px;
+                    white-space: nowrap;
+                }
+                
+                .heatmap-division-select {
                     padding: 8px 12px;
                     border: 1px solid #ddd;
                     border-radius: 4px;
                     font-family: 'Roboto', Arial, sans-serif;
                     font-size: 14px;
                     color: #212529;
-                    min-width: 250px;
+                    min-width: 150px;
+                    background: white;
                 }
                 
-                .heatmap-search-clear {
+                .heatmap-case-search-input {
                     padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-family: 'Roboto', Arial, sans-serif;
+                    font-size: 14px;
+                    color: #212529;
+                    min-width: 200px;
+                }
+                
+                .heatmap-clear-filters {
+                    padding: 8px 16px;
                     border: 1px solid #ddd;
                     background: white;
                     color: #212529;
@@ -280,14 +306,15 @@ class SupremeCourtHeatmap {
                     border-radius: 4px;
                     font-family: 'Roboto', Arial, sans-serif;
                     font-size: 14px;
+                    margin-left: 10px;
                 }
                 
-                .heatmap-search-clear:hover {
+                .heatmap-clear-filters:hover {
                     background: #e9ecef;
                 }
                 
-                .heatmap-search-results {
-                    margin-left: 15px;
+                .heatmap-filter-results {
+                    margin-top: 10px;
                     color: #6c757d;
                     font-size: 14px;
                 }
@@ -366,23 +393,42 @@ class SupremeCourtHeatmap {
         return text.length > 200 ? text.substring(0, 200) + '...' : text;
     }
     
-    searchData(searchTerm) {
-        this.currentSearchTerm = searchTerm.toLowerCase().trim();
+    extractDivisions() {
+        // Extract unique divisions from the data
+        var divisionsSet = new Set();
         
-        if (!this.currentSearchTerm) {
-            this.filteredData = this.data;
-        } else {
-            var self = this;
-            this.filteredData = this.data.filter(function(d) {
-                var division = (d.division || '').toLowerCase();
-                var ponente = (d.ponente || '').toLowerCase();
-                
-                return division.includes(self.currentSearchTerm) || 
-                       ponente.includes(self.currentSearchTerm);
-            });
-        }
+        this.data.forEach(function(d) {
+            if (d.division && d.division.trim()) {
+                divisionsSet.add(d.division.trim());
+            }
+        });
         
-        // Reset to first page when searching
+        // Convert to array and sort
+        this.divisions = Array.from(divisionsSet).sort();
+    }
+    
+    filterData() {
+        var self = this;
+        
+        this.filteredData = this.data.filter(function(d) {
+            var divisionMatch = true;
+            var caseMatch = true;
+            
+            // Division filter
+            if (self.currentDivisionFilter && self.currentDivisionFilter !== 'all') {
+                divisionMatch = d.division && d.division.trim() === self.currentDivisionFilter;
+            }
+            
+            // Case number search
+            if (self.currentCaseSearchTerm) {
+                var caseNo = (d.case_no || '').toLowerCase();
+                caseMatch = caseNo.includes(self.currentCaseSearchTerm.toLowerCase().trim());
+            }
+            
+            return divisionMatch && caseMatch;
+        });
+        
+        // Reset to first page when filtering
         this.currentPage = 1;
         
         // Update the display
@@ -397,18 +443,54 @@ class SupremeCourtHeatmap {
         container.select('.heatmap-pagination').remove();
         this.createPagination(container);
         
-        // Update search results info
-        this.updateSearchResults();
+        // Update filter results info
+        this.updateFilterResults();
     }
     
-    updateSearchResults() {
-        var searchResults = d3.select('#' + this.containerId + ' .heatmap-search-results');
+    updateFilterResults() {
+        var filterResults = d3.select('#' + this.containerId + ' .heatmap-filter-results');
         
-        if (this.currentSearchTerm) {
-            searchResults.text('Found ' + this.filteredData.length + ' of ' + this.data.length + ' cases');
+        var totalCases = this.data.length;
+        var filteredCases = this.filteredData.length;
+        
+        if (this.currentDivisionFilter || this.currentCaseSearchTerm) {
+            var filterText = 'Found ' + filteredCases + ' of ' + totalCases + ' cases';
+            
+            var activeFilters = [];
+            if (this.currentDivisionFilter && this.currentDivisionFilter !== 'all') {
+                activeFilters.push('Division: ' + this.currentDivisionFilter);
+            }
+            if (this.currentCaseSearchTerm) {
+                activeFilters.push('Case: "' + this.currentCaseSearchTerm + '"');
+            }
+            
+            if (activeFilters.length > 0) {
+                filterText += ' (' + activeFilters.join(', ') + ')';
+            }
+            
+            filterResults.text(filterText);
         } else {
-            searchResults.text('');
+            filterResults.text('');
         }
+    }
+    
+    clearAllFilters() {
+        this.currentDivisionFilter = '';
+        this.currentCaseSearchTerm = '';
+        
+        // Reset form elements
+        var divisionSelect = d3.select('#' + this.containerId + ' .heatmap-division-select');
+        var caseSearchInput = d3.select('#' + this.containerId + ' .heatmap-case-search-input');
+        
+        if (!divisionSelect.empty()) {
+            divisionSelect.property('value', 'all');
+        }
+        
+        if (!caseSearchInput.empty()) {
+            caseSearchInput.property('value', '');
+        }
+        
+        this.filterData();
     }
     
     async loadData() {
@@ -439,6 +521,10 @@ class SupremeCourtHeatmap {
             
             this.data = cleanedData;
             this.filteredData = cleanedData;
+            
+            // Extract unique divisions
+            this.extractDivisions();
+            
             this.createHeatmap();
             
         } catch (error) {
@@ -466,39 +552,77 @@ class SupremeCourtHeatmap {
             .append('div')
             .attr('class', 'heatmap-container');
         
-        // Legend at the top with search
+        // Legend at the top with filters
         var legendDiv = heatmapDiv.append('div')
             .attr('class', 'heatmap-legend');
         
-        // Search container
-        var searchContainer = legendDiv.append('div')
-            .attr('class', 'heatmap-search-container');
-        
-        searchContainer.append('label')
-            .attr('for', 'heatmap-search')
-            .text('Search by division or ponente: ');
-        
-        var searchInput = searchContainer.append('input')
-            .attr('type', 'text')
-            .attr('id', 'heatmap-search')
-            .attr('class', 'heatmap-search-input')
-            .attr('placeholder', 'Enter division (e.g., "FIRST", "EN BANC") or ponente name...');
+        // Filters container
+        var filtersContainer = legendDiv.append('div')
+            .attr('class', 'heatmap-filters-container');
         
         var self = this;
-        searchInput.on('input', function() {
-            self.searchData(this.value);
+        
+        // Division dropdown
+        var divisionGroup = filtersContainer.append('div')
+            .attr('class', 'heatmap-filter-group');
+        
+        divisionGroup.append('label')
+            .attr('class', 'heatmap-filter-label')
+            .attr('for', 'division-select')
+            .text('Division:');
+        
+        var divisionSelect = divisionGroup.append('select')
+            .attr('id', 'division-select')
+            .attr('class', 'heatmap-division-select');
+        
+        // Add "All Divisions" option
+        divisionSelect.append('option')
+            .attr('value', 'all')
+            .text('All Divisions');
+        
+        // Add division options
+        this.divisions.forEach(function(division) {
+            divisionSelect.append('option')
+                .attr('value', division)
+                .text(division);
         });
         
-        searchContainer.append('button')
-            .attr('class', 'heatmap-search-clear')
-            .text('Clear')
+        divisionSelect.on('change', function() {
+            self.currentDivisionFilter = this.value === 'all' ? '' : this.value;
+            self.filterData();
+        });
+        
+        // Case search input
+        var caseSearchGroup = filtersContainer.append('div')
+            .attr('class', 'heatmap-filter-group');
+        
+        caseSearchGroup.append('label')
+            .attr('class', 'heatmap-filter-label')
+            .attr('for', 'case-search')
+            .text('Case No:');
+        
+        var caseSearchInput = caseSearchGroup.append('input')
+            .attr('type', 'text')
+            .attr('id', 'case-search')
+            .attr('class', 'heatmap-case-search-input')
+            .attr('placeholder', 'Search case number...');
+        
+        caseSearchInput.on('input', function() {
+            self.currentCaseSearchTerm = this.value;
+            self.filterData();
+        });
+        
+        // Clear filters button
+        filtersContainer.append('button')
+            .attr('class', 'heatmap-clear-filters')
+            .text('Clear All Filters')
             .on('click', function() {
-                searchInput.property('value', '');
-                self.searchData('');
+                self.clearAllFilters();
             });
         
-        searchContainer.append('span')
-            .attr('class', 'heatmap-search-results');
+        // Filter results display
+        legendDiv.append('div')
+            .attr('class', 'heatmap-filter-results');
         
         // Legend items
         legendDiv.append('div')
@@ -528,7 +652,7 @@ class SupremeCourtHeatmap {
         // Create pagination
         this.createPagination(heatmapDiv);
         
-        console.log('Supreme Court Heatmap: Loaded ' + this.data.length + ' court cases');
+        console.log('Supreme Court Heatmap: Loaded ' + this.data.length + ' court cases with ' + this.divisions.length + ' divisions');
     }
     
     createTableHeader(table) {
@@ -638,11 +762,11 @@ class SupremeCourtHeatmap {
             .attr('class', 'heatmap-pagination');
         
         // Pagination info
-        var searchText = this.currentSearchTerm ? ' (filtered)' : '';
+        var filterText = (this.currentDivisionFilter || this.currentCaseSearchTerm) ? ' (filtered)' : '';
         paginationDiv
             .append('div')
             .attr('class', 'heatmap-pagination-info')
-            .text('Showing ' + (this.filteredData.length > 0 ? startItem : 0) + '-' + endItem + ' of ' + this.filteredData.length + ' decisions' + searchText);
+            .text('Showing ' + (this.filteredData.length > 0 ? startItem : 0) + '-' + endItem + ' of ' + this.filteredData.length + ' decisions' + filterText);
         
         // Only show pagination controls if there are results
         if (this.filteredData.length === 0) {
@@ -651,7 +775,7 @@ class SupremeCourtHeatmap {
                 .style('text-align', 'center')
                 .style('padding', '20px')
                 .style('color', '#6c757d')
-                .text('No cases found matching your search criteria.');
+                .text('No cases found matching your filter criteria.');
             return;
         }
         
