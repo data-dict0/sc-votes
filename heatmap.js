@@ -115,9 +115,9 @@ class SupremeCourtHeatmap {
                 }
                 
                 .heatmap-pagination-btn.active {
-                    background: #82c9b2;
+                    background: #666666;
                     color: white;
-                    border-color: #82c9b2;
+                    border-color: #666666;
                 }
                 
                 .heatmap-page-select {
