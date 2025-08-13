@@ -69,6 +69,7 @@ class SupremeCourtHeatmap {
                 .heatmap-table-container {
                     overflow-x: auto;
                     max-height: none;
+                    position: relative;
                 }
                 
                 .heatmap-pagination {
@@ -337,6 +338,108 @@ class SupremeCourtHeatmap {
                     text-orientation: mixed;
                     min-width: 35px;
                     font-size: 11px;
+                }
+
+                /* Mobile-specific styles for sticky first column */
+                @media (max-width: 768px) {
+                    .heatmap-table-container {
+                        position: relative;
+                    }
+                    
+                    /* Make first column (case no) sticky on mobile */
+                    .heatmap-table th:first-child,
+                    .heatmap-table td:first-child {
+                        position: sticky;
+                        left: 0;
+                        z-index: 90;
+                        background: white;
+                        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+                    }
+                    
+                    /* Higher z-index for header first column */
+                    .heatmap-table th:first-child {
+                        z-index: 110;
+                        background: white;
+                    }
+                    
+                    /* Ensure case no column has proper styling when sticky */
+                    .heatmap-case-no-col {
+                        background: white;
+                        min-width: 120px;
+                        max-width: 120px;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                    }
+                    
+                    /* Adjust other column widths on mobile */
+                    .heatmap-date-col,
+                    .heatmap-division-col,
+                    .heatmap-ponente-col {
+                        min-width: 120px;
+                    }
+                    
+                    .heatmap-justice-cell {
+                        min-width: 50px;
+                    }
+                    
+                    /* Responsive adjustments for mobile */
+                    .heatmap-filters-container {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 10px;
+                    }
+                    
+                    .heatmap-filter-group {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 5px;
+                    }
+                    
+                    .heatmap-division-select,
+                    .heatmap-case-search-input {
+                        min-width: 100%;
+                    }
+                    
+                    /* Keep pagination horizontal but improve mobile layout */
+                    .heatmap-pagination-controls {
+                        flex-direction: row;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    }
+                    
+                    .heatmap-pagination-btn {
+                        min-width: 40px;
+                        min-height: 40px;
+                        padding: 6px 10px;
+                        font-size: 13px;
+                    }
+                    
+                    .heatmap-page-select {
+                        font-size: 13px;
+                        padding: 6px 8px;
+                    }
+                    
+                    /* Make legend items smaller and inline on mobile */
+                    .heatmap-legend-item {
+                        display: inline-block;
+                        margin: 3px 5px;
+                        padding: 2px 6px;
+                        font-size: 10px;
+                        border-radius: 2px;
+                    }
+                }
+                
+                /* Tablet styles */
+                @media (min-width: 769px) and (max-width: 1024px) {
+                    .heatmap-case-no-col {
+                        min-width: 110px;
+                    }
+                    
+                    .heatmap-filters-container {
+                        flex-direction: row;
+                        flex-wrap: wrap;
+                    }
                 }
                 </style>
             `;
